@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI at http://localhost:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  fastapi:
+    build: ./src
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./src:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+
+  celery:
+    build: ./src
+    command: celery -A worker.celery.app worker --loglevel=info
+    volumes:
+      - ./src:/code
+    depends_on:
+      - rabbitmq
+  pika:
+    build: ./src
+    command: python -u consumer.py
+    volumes:
+      - ./src:/code
+    depends_on:
+      - rabbitmq
