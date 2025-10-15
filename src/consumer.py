@@ -1,7 +1,8 @@
 from concurrent.futures import ProcessPoolExecutor
-from pathlib import Path
 from uuid import uuid4
 import pika
+
+from worker.utils import create_dir, slow_func, unwrap_data
 
 
 QUEUE_NAME = "pdf_queue"
@@ -10,25 +11,16 @@ QUEUE_NAME = "pdf_queue"
 executor = ProcessPoolExecutor(max_workers=4)
 
 
-def slow_func():
-    result = 0
-    for x in range(10**9):
-        result += x
-
-
-def create_dir():
-    output_dir = Path.cwd() / "output"
-    path = output_dir.resolve()
-    path.mkdir(exist_ok=True)
-    return path
-
-
 def process_message(content: bytes):
     print("Processing message in subprocess...")
+
+    file_bytes, metadata = unwrap_data(content)
+    print("File data recieved: ", metadata)
+
     slow_func()
-    file_path = create_dir() / f"{uuid4()}.txt"
+    file_path = create_dir() / f"{uuid4()}.pdf"
     with file_path.open("wb") as file:
-        file.write(content)
+        file.write(file_bytes)
     print("File written successfully.")
 
 
