@@ -2,6 +2,7 @@ from fastapi import FastAPI, Form, File, UploadFile
 from typing import Annotated
 from worker.tasks import generate_pdf_task
 from publisher import send_pika_message
+from worker.utils import wrap_data
 
 
 app = FastAPI()
@@ -30,7 +31,13 @@ async def generate_pdf_file_pika(
     copies: int = Form(1, ge=1, le=20)
 ):
     content = await file.read()
+    metadata = {
+        "name": file.filename,
+        "type": file.content_type,
+        "size": file.size
+    }
+    message = wrap_data(content, metadata)
     for _ in range(copies):
-        send_pika_message(content)
+        send_pika_message(message)
 
     return {"message": f"your file - {file.filename} - was recieved"}
